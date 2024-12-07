@@ -33,7 +33,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     for entry in read_dir(llvm_config("--libdir")?)? {
         if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
             if name.starts_with("libMLIRCAPI") {
-                if let Some(name) = parse_archive_name(&name) {
+                if let Some(name) = parse_archive_name(name) {
                     println!("cargo:rustc-link-lib=static={name}");
                 }
             }
