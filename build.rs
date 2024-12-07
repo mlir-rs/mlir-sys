@@ -43,7 +43,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         .flatten()
     {
         if name.starts_with("libMLIR")
-            && name.ends_with(".a")
             && !name.contains("Main")
             && name != "libMLIRSupportIndentedOstream.a"
         {
