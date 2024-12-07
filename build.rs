@@ -30,9 +30,8 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
-    println!("cargo:rustc-link-lib=MLIR");
 
-    let mut libraries = read_dir(llvm_config("--libdir")?)?
+    let libraries = read_dir(llvm_config("--libdir")?)?
         .map(|entry| {
             Ok(if let Some(name) = entry?.path().file_name() {
                 name.to_str().map(String::from)
@@ -44,7 +43,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-    libraries.sort_by_key(|name| name.len());
 
     for name in libraries {
         if name.starts_with("libMLIRCAPI") && name.ends_with(".a") {
@@ -53,6 +51,8 @@ fn run() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+
+    println!("cargo:rustc-link-lib=MLIR");
 
     for name in llvm_config("--libnames")?.trim().split(' ') {
         if let Some(name) = trim_library_name(name) {
