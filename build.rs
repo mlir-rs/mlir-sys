@@ -43,7 +43,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-    libraries.sort_by(|one, other| one.contains("LLVM").cmp(&other.contains("LLVM")));
+    libraries.sort_by_key(|name| name.len());
 
     for name in libraries {
         if name.starts_with("libMLIR") && name.ends_with(".a") && !name.contains("Main") {
