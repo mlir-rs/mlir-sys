@@ -31,7 +31,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
-    for name in read_dir(llvm_config("--libdir")?)?
+    let mut libraries = read_dir(llvm_config("--libdir")?)?
         .map(|entry| {
             Ok(if let Some(name) = entry?.path().file_name() {
                 name.to_str().map(String::from)
@@ -42,7 +42,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         .collect::<Result<Vec<_>, io::Error>>()?
         .into_iter()
         .flatten()
-    {
+        .collect::<Vec<_>>();
+    libraries.sort_by(|one, other| one.contains("LLVM").cmp(&other.contains("LLVM")));
+
+    for name in libraries {
         if name.starts_with("libMLIR") && name.ends_with(".a") && !name.contains("Main") {
             if let Some(name) = trim_library_name(&name) {
                 println!("cargo:rustc-link-lib=static={name}");
