@@ -30,6 +30,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
+    println!("cargo:rustc-link-lib=MLIR");
 
     let mut libraries = read_dir(llvm_config("--libdir")?)?
         .map(|entry| {
@@ -46,7 +47,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     libraries.sort_by_key(|name| name.len());
 
     for name in libraries {
-        if name.starts_with("libMLIR") && name.ends_with(".a") && !name.contains("Main") {
+        if name.starts_with("libMLIRCAPI") && name.ends_with(".a") {
             if let Some(name) = trim_library_name(&name) {
                 println!("cargo:rustc-link-lib=static={name}");
             }
