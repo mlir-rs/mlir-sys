@@ -1,8 +1,8 @@
 use std::{
     env,
     error::Error,
+    ffi::OsStr,
     fs::read_dir,
-    io,
     path::Path,
     process::{exit, Command},
     str,
@@ -31,23 +31,12 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
-    let libraries = read_dir(llvm_config("--libdir")?)?
-        .map(|entry| {
-            Ok(if let Some(name) = entry?.path().file_name() {
-                name.to_str().map(String::from)
-            } else {
-                None
-            })
-        })
-        .collect::<Result<Vec<_>, io::Error>>()?
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-
-    for name in libraries {
-        if name.starts_with("libMLIRCAPI") && name.ends_with(".a") {
-            if let Some(name) = trim_library_name(&name) {
-                println!("cargo:rustc-link-lib=static={name}");
+    for entry in read_dir(llvm_config("--libdir")?)? {
+        if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
+            if name.starts_with("libMLIRCAPI") {
+                if let Some(name) = parse_archive_name(&name) {
+                    println!("cargo:rustc-link-lib=static={name}");
+                }
             }
         }
     }
@@ -55,7 +44,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rustc-link-lib=MLIR");
 
     for name in llvm_config("--libnames")?.trim().split(' ') {
-        if let Some(name) = trim_library_name(name) {
+        if let Some(name) = parse_archive_name(name) {
             println!("cargo:rustc-link-lib={}", name);
         }
     }
@@ -134,7 +123,7 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     .to_string())
 }
 
-fn trim_library_name(name: &str) -> Option<&str> {
+fn parse_archive_name(name: &str) -> Option<&str> {
     if let Some(name) = name.strip_prefix("lib") {
         name.strip_suffix(".a")
     } else {
