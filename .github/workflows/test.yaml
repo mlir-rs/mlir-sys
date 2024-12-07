@@ -5,6 +5,20 @@ on:
       - main
   pull_request:
 jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swatinem/rust-cache@v2
+      - uses: homebrew/actions/setup-homebrew@master
+      - run: tools/setup.sh
+      - run: cargo build
   test:
     strategy:
       fail-fast: false
