@@ -20,10 +20,9 @@ fn main() {
 fn run() -> Result<(), Box<dyn Error>> {
     let version = llvm_config("--version")?;
 
-    if !version.starts_with(&format!("{}.", LLVM_MAJOR_VERSION)) {
+    if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.",)) {
         return Err(format!(
-            "failed to find correct version ({}.x.x) of llvm-config (found {})",
-            LLVM_MAJOR_VERSION, version
+            "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
         )
         .into());
     }
@@ -45,7 +44,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     for name in llvm_config("--libnames")?.trim().split(' ') {
         if let Some(name) = parse_archive_name(name) {
-            println!("cargo:rustc-link-lib={}", name);
+            println!("cargo:rustc-link-lib={name}");
         }
     }
 
@@ -69,12 +68,12 @@ fn run() -> Result<(), Box<dyn Error>> {
                     .trim_start_matches("lib")
             );
         } else {
-            println!("cargo:rustc-link-lib={}", flag);
+            println!("cargo:rustc-link-lib={flag}");
         }
     }
 
     if let Some(name) = get_system_libcpp() {
-        println!("cargo:rustc-link-lib={}", name);
+        println!("cargo:rustc-link-lib={name}");
     }
 
     bindgen::builder()
@@ -99,13 +98,12 @@ fn get_system_libcpp() -> Option<&'static str> {
 }
 
 fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
-    let prefix = env::var(format!("MLIR_SYS_{}0_PREFIX", LLVM_MAJOR_VERSION))
+    let prefix = env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
     let call = format!(
-        "{} --link-static {}",
+        "{} --link-static {argument}",
         prefix.join("llvm-config").display(),
-        argument
     );
 
     Ok(str::from_utf8(
