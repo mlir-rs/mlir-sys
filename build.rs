@@ -1,7 +1,8 @@
 use std::{
     env,
     error::Error,
-    fs, io,
+    fs::read_dir,
+    io,
     path::Path,
     process::{exit, Command},
     str,
@@ -30,7 +31,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
-    for name in fs::read_dir(llvm_config("--libdir")?)?
+    for name in read_dir(llvm_config("--libdir")?)?
         .map(|entry| {
             Ok(if let Some(name) = entry?.path().file_name() {
                 name.to_str().map(String::from)
@@ -42,13 +43,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         .into_iter()
         .flatten()
     {
-        if name.starts_with("libMLIR")
-            && name.ends_with(".a")
-            && !name.contains("Main")
-            && name != "libMLIRSupportIndentedOstream.a"
-        {
+        if name.starts_with("libMLIR") && name.ends_with(".a") && !name.contains("Main") {
             if let Some(name) = trim_library_name(&name) {
-                println!("cargo:rustc-link-lib=static={}", name);
+                println!("cargo:rustc-link-lib=static={name}");
             }
         }
     }
