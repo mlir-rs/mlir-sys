@@ -18,8 +18,6 @@ jobs:
       - uses: swatinem/rust-cache@v2
       - uses: homebrew/actions/setup-homebrew@master
       - run: tools/setup.sh
-      - run: $MLIR_SYS_190_PREFIX/bin/llvm-config --link-static --libnames
-      - run: ls -1 $($MLIR_SYS_190_PREFIX/bin/llvm-config --link-static --libdir) | sort
       - run: cargo test
   lint:
     runs-on: ubuntu-latest
