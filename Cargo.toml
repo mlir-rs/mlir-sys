@@ -10,4 +10,4 @@ links = "MLIR"
 license-file = "LICENSE"
 
 [build-dependencies]
-bindgen = "0.70.1"
+bindgen = "0.71.0"
