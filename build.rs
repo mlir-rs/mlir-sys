@@ -101,9 +101,15 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     let prefix = env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
+    let llvm_config_exe = if cfg!(target_os = "windows") {
+        "llvm-config.exe"
+    } else {
+        "llvm-config"
+    };
+
     let call = format!(
         "{} --link-static {argument}",
-        prefix.join("llvm-config").display(),
+        prefix.join(llvm_config_exe).display(),
     );
 
     Ok(str::from_utf8(
