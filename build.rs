@@ -4,7 +4,7 @@ use std::{
     ffi::OsStr,
     fs::read_dir,
     path::Path,
-    process::{exit, Command},
+    process::{Command, exit},
     str,
 };
 
