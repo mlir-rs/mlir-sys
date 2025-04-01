@@ -4,11 +4,11 @@ use std::{
     ffi::OsStr,
     fs::read_dir,
     path::Path,
-    process::{exit, Command},
+    process::{Command, exit},
     str,
 };
 
-const LLVM_MAJOR_VERSION: usize = 19;
+const LLVM_MAJOR_VERSION: usize = 20;
 
 fn main() {
     if let Err(error) = run() {
