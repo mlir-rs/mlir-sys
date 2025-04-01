@@ -1,10 +1,12 @@
 [package]
 name = "mlir-sys"
-version = "0.4.2"
-authors = ["McCoy R. Becker, Yota Toyama"]
-edition = "2021"
+version = "0.5.0"
+authors = ["McCoy R. Becker", "Yota Toyama", "Edgar Luque"]
+keywords = ["mlir", "llvm"]
+categories = ["external-ffi-bindings"]
+edition = "2024"
 description = "Rust bindings to the MLIR C API."
-repository = "https://github.com/femtomc/mlir-sys"
+repository = "https://github.com/mlir-rs/mlir-sys"
 readme = "README.md"
 links = "MLIR"
 license-file = "LICENSE"

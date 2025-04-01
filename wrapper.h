@@ -9,6 +9,7 @@
 #include <mlir-c/Dialect/Arith.h>
 #include <mlir-c/Dialect/Async.h>
 #include <mlir-c/Dialect/ControlFlow.h>
+#include <mlir-c/Dialect/EmitC.h>
 #include <mlir-c/Dialect/Func.h>
 #include <mlir-c/Dialect/GPU.h>
 #include <mlir-c/Dialect/IRDL.h>
@@ -18,6 +19,7 @@
 #include <mlir-c/Dialect/Math.h>
 #include <mlir-c/Dialect/MemRef.h>
 #include <mlir-c/Dialect/NVGPU.h>
+#include <mlir-c/Dialect/NVVM.h>
 #include <mlir-c/Dialect/OpenMP.h>
 #include <mlir-c/Dialect/PDL.h>
 #include <mlir-c/Dialect/Quant.h>
