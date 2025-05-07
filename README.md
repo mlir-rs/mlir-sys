@@ -14,6 +14,8 @@ cargo add mlir-sys
 
 This crate searches an `llvm-config` command on build and uses it to determine build configurations related to LLVM and MLIR. You can also use a `MLIR_SYS_190_PREFIX` environment variable to specify a custom directory of LLVM installation.
 
+You can also use the `bundled` feature to download automatically a LLVM config.
+
 ## License
 
 [MIT](LICENSE)

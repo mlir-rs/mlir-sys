@@ -1,14 +1,23 @@
 use std::{
-    env,
+    env::{self, set_var},
     error::Error,
     ffi::OsStr,
-    fs::read_dir,
+    fs::{create_dir, exists, read_dir},
     path::Path,
     process::{Command, exit},
     str,
+    time::Duration,
 };
 
+use bytes::Bytes;
+use liblzma::read::XzDecoder;
+use tar::Archive;
+
 const LLVM_MAJOR_VERSION: usize = 20;
+
+const LINUX_ARTIFACT_URL: &str = "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.4/LLVM-20.1.4-Linux-X64.tar.xz";
+const LLVM_CACHE_PREFIX: &str = ".llvm-cache";
+const CURRENT_LLVM: &str = "LLVM-20.1.4-Linux-X64";
 
 fn main() {
     if let Err(error) = run() {
@@ -19,6 +28,9 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let version = llvm_config("--version")?;
+
+    #[cfg(feature = "bundled")]
+    bundle_cache()?;
 
     if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.",)) {
         return Err(format!(
@@ -98,9 +110,13 @@ fn get_system_libcpp() -> Option<&'static str> {
 }
 
 fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
+    #[cfg(not(feature = "bundled"))]
     let prefix = env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
+    #[cfg(feature = "bundled")]
+    let prefix = Path::new(LLVM_CACHE_PREFIX).join(CURRENT_LLVM).join("bin");
+
     let llvm_config_exe = if cfg!(target_os = "windows") {
         "llvm-config.exe"
     } else {
@@ -130,4 +146,29 @@ fn parse_archive_name(name: &str) -> Option<&str> {
     } else {
         None
     }
+}
+
+fn decompress_tar_xz_stream(data: Bytes) -> Result<(), Box<dyn std::error::Error>> {
+    let cursor = std::io::Cursor::new(data);
+    let decoder = XzDecoder::new_parallel(cursor);
+    let mut archive = Archive::new(decoder);
+    archive.unpack(LLVM_CACHE_PREFIX)?;
+    Ok(())
+}
+
+fn bundle_cache() -> Result<(), Box<dyn Error>> {
+    if !exists(LLVM_CACHE_PREFIX).unwrap_or(false) {
+        create_dir(LLVM_CACHE_PREFIX).unwrap();
+        let client = reqwest::blocking::Client::builder()
+            .timeout(Duration::from_secs(60 * 5))
+            .build()?;
+        let response = client.get(LINUX_ARTIFACT_URL).send()?.bytes()?;
+        decompress_tar_xz_stream(response)?;
+    }
+    let libclang_path = Path::new(LLVM_CACHE_PREFIX).join(CURRENT_LLVM).join("lib");
+    unsafe {
+        //The build.rs should not be multithreaded at this point.
+        set_var("LIBCLANG_PATH", libclang_path);
+    }
+    Ok(())
 }
