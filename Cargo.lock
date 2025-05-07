@@ -711,6 +711,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23fb14cb19457329c82206317a5663005a4d404783dc74f4252769b0d5f42856"
 
 [[package]]
+name = "llvm-bundler-rs"
+version = "0.1.0"
+source = "git+https://github.com/marcantoinem/llvm-bundler-rs#875811212d3a0074772b2778c4ed5e8a3e60465f"
+dependencies = [
+ "bytes",
+ "liblzma",
+ "reqwest",
+ "tar",
+]
+
+[[package]]
 name = "log"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -759,10 +770,7 @@ name = "mlir-sys"
 version = "0.5.0"
 dependencies = [
  "bindgen",
- "bytes",
- "liblzma",
- "reqwest",
- "tar",
+ "llvm-bundler-rs",
 ]
 
 [[package]]
