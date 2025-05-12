@@ -12,8 +12,8 @@ links = "MLIR"
 license-file = "LICENSE"
 
 [features]
-bundled = ["dep:llvm-bundler-rs"]
+bundled = []
 
 [build-dependencies]
 bindgen = "0.71.1"
-llvm-bundler-rs = { git = "https://github.com/marcantoinem/llvm-bundler-rs", optional = true }
+llvm-bundler-rs = { git = "https://github.com/marcantoinem/llvm-bundler-rs", features = ["bundled"]}

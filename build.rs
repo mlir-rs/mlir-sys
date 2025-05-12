@@ -1,13 +1,12 @@
 use std::{
-    env::{self, set_var},
+    env,
     error::Error,
-    ffi::OsStr,
-    fs::{create_dir, exists, read_dir},
     path::Path,
-    process::{exit, Command},
+    process::{Command, exit},
     str,
-    time::Duration,
 };
+
+use llvm_bundler_rs::{dependency_graph::DependencyGraph, topological_sort::TopologicalSort};
 
 const LLVM_MAJOR_VERSION: usize = 20;
 
@@ -20,7 +19,7 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "bundled")]
-    llvm_bundler_rs::bundle_cache()?;
+    llvm_bundler_rs::bundler::bundle_cache()?;
 
     let version = llvm_config("--version")?;
 
@@ -34,22 +33,22 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
-    for entry in read_dir(llvm_config("--libdir")?)? {
-        if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-            if name.starts_with("libMLIR") {
-                if let Some(name) = parse_archive_name(name) {
-                    println!("cargo:rustc-link-lib=static={name}");
-                }
-            }
-        }
+    let prefix =
+        Path::new(&env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX")).unwrap_or_default())
+            .join("lib")
+            .join("cmake")
+            .join("mlir")
+            .join("MLIRTargets.cmake");
+    let path = DependencyGraph::from_cmake(prefix)?;
+    let mlirlib = TopologicalSort::get_ordered_list(&path);
+
+    for lib in mlirlib.iter().rev() {
+        println!("cargo:rustc-link-lib=static={lib}");
     }
 
-    println!("cargo:rustc-link-lib=MLIR");
-
-    for name in llvm_config("--libnames")?.trim().split(' ') {
-        if let Some(name) = parse_archive_name(name) {
-            println!("cargo:rustc-link-lib={name}");
-        }
+    for flag in llvm_config("--libs")?.trim().split(' ') {
+        let flag = flag.trim_start_matches("-l");
+        println!("cargo:rustc-link-lib=static={flag}");
     }
 
     for flag in llvm_config("--system-libs")?.trim().split(' ') {
@@ -112,27 +111,12 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
         "llvm-config"
     };
 
-    let call = format!(
-        "{} --link-static {argument}",
-        prefix.join(llvm_config_exe).display(),
-    );
+    let path = prefix.join(llvm_config_exe);
 
-    Ok(str::from_utf8(
-        &if cfg!(target_os = "windows") {
-            Command::new("cmd").args(["/C", &call]).output()?
-        } else {
-            Command::new("sh").arg("-c").arg(&call).output()?
-        }
-        .stdout,
-    )?
-    .trim()
-    .to_string())
-}
-
-fn parse_archive_name(name: &str) -> Option<&str> {
-    if let Some(name) = name.strip_prefix("lib") {
-        name.strip_suffix(".a")
-    } else {
-        None
-    }
+    let stdout = Command::new(path)
+        .arg("--link-static")
+        .arg(argument)
+        .output()?
+        .stdout;
+    Ok(str::from_utf8(&stdout)?.trim().to_string())
 }
