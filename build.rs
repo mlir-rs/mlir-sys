@@ -113,10 +113,17 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
 
     let path = prefix.join(llvm_config_exe);
 
-    let stdout = Command::new(path)
+    let output = Command::new(path)
         .arg("--link-static")
         .arg(argument)
-        .output()?
-        .stdout;
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = output.stderr;
+        eprintln!("{}", str::from_utf8(&stderr)?.trim().to_owned());
+        exit(1);
+    }
+
+    let stdout = output.stdout;
     Ok(str::from_utf8(&stdout)?.trim().to_string())
 }
