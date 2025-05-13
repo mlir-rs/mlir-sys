@@ -82,7 +82,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     bindgen::builder()
         .header("wrapper.h")
         .clang_arg(format!("-I{}", llvm_config("--includedir")?))
-        .clang_arg("-I/usr/include/linux")
+        .clang_arg("-I/usr/include")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .unwrap()
