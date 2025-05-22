@@ -17,9 +17,10 @@
         };
       in
       {
-        devShells.default = pkgs.mkShell {
+        devShells.default = pkgs.mkShell.override {
+          stdenv = pkgs.llvmPackages_20.stdenv;
+        } {
           name = "ssl-project";
-
           packages = with pkgs; [
             pkg-config
             openssl.dev

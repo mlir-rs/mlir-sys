@@ -16,4 +16,4 @@ bundled = []
 
 [build-dependencies]
 bindgen = "0.71.1"
-llvm-bundler-rs = { git = "https://github.com/marcantoinem/llvm-bundler-rs", version = "0.0.2", features = ["bundled"]}
+llvm-bundler-rs = { git = "https://github.com/marcantoinem/llvm-bundler-rs", version = "0.0.3", features = ["bundled"]}
