@@ -3,3 +3,4 @@ target
 .llvm-cache
 .llvm-test
 /Cargo.lock
+.envrc
