@@ -17,6 +17,22 @@ fn main() {
     }
 }
 
+#[cfg(feature = "bundled")]
+fn link_mlir_statically() -> Result<(), Box<dyn Error>> {
+    let prefix = Path::new(&env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))?)
+        .join("lib")
+        .join("cmake")
+        .join("mlir")
+        .join("MLIRTargets.cmake");
+    let path = DependencyGraph::from_cmake(prefix)?;
+    let mlirlib = TopologicalSort::get_ordered_list(&path);
+
+    for lib in mlirlib.iter().rev() {
+        println!("cargo:rustc-link-lib=static={lib}");
+    }
+    Ok(())
+}
+
 fn run() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "bundled")]
     llvm_bundler_rs::bundler::bundle_cache()?;
@@ -33,18 +49,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
-    let prefix =
-        Path::new(&env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX")).unwrap_or_default())
-            .join("lib")
-            .join("cmake")
-            .join("mlir")
-            .join("MLIRTargets.cmake");
-    let path = DependencyGraph::from_cmake(prefix)?;
-    let mlirlib = TopologicalSort::get_ordered_list(&path);
+    #[cfg(feature = "bundled")]
+    link_mlir_statically()?;
 
-    for lib in mlirlib.iter().rev() {
-        println!("cargo:rustc-link-lib=static={lib}");
-    }
+    #[cfg(not(feature = "bundled"))]
+    println!("cargo:rustc-link-lib=MLIR");
 
     for flag in llvm_config("--libs")?.trim().split(' ') {
         let flag = flag.trim_start_matches("-l");

@@ -701,8 +701,9 @@ checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
 name = "llvm-bundler-rs"
-version = "0.0.3"
-source = "git+https://github.com/marcantoinem/llvm-bundler-rs#bc7c3c91ba8cac815219f9169054a28dba4dc630"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08866ec89bd1a5dc12a394b90b6cdc711e4896dfdc9ef45bd1ffb918b01b12bb"
 dependencies = [
  "bytes",
  "dirs",
