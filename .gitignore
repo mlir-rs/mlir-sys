@@ -1,6 +1,4 @@
 target
 .direnv
-.llvm-cache
-.llvm-test
 /Cargo.lock
 .envrc
