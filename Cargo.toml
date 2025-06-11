@@ -11,5 +11,9 @@ readme = "README.md"
 links = "MLIR"
 license-file = "LICENSE"
 
+[features]
+bundled = ["llvm-bundler-rs/bundled"]
+
 [build-dependencies]
 bindgen = "0.71.1"
+llvm-bundler-rs = { version = "0.2.0", features = []}
