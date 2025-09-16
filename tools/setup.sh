@@ -31,19 +31,16 @@ elif [ "$(uname)" = "Linux" ]; then
     
     sudo apt-get update
     
-    # Install LLVM packages with MLIR support
+    # Install minimal packages needed for MLIR C API bindings
+    # We need: MLIR dev files, LLVM libraries that MLIR depends on, and clang for bindgen
     sudo apt-get install -y \
-        llvm-${llvm_version} \
-        llvm-${llvm_version}-dev \
-        llvm-${llvm_version}-tools \
-        clang-${llvm_version} \
-        libclang-${llvm_version}-dev \
-        liblld-${llvm_version}-dev \
         libmlir-${llvm_version}-dev \
         mlir-${llvm_version}-tools \
+        llvm-${llvm_version}-dev \
+        clang-${llvm_version} \
         libpolly-${llvm_version}-dev \
         || {
-        echo "Error: Failed to install LLVM ${llvm_version}"
+        echo "Error: Failed to install LLVM ${llvm_version} packages"
         echo "Please check if LLVM ${llvm_version} is available for your Ubuntu version at https://apt.llvm.org/"
         exit 1
     }
