@@ -32,7 +32,6 @@ elif [ "$(uname)" = "Linux" ]; then
     sudo apt-get update
     
     # Install LLVM packages with MLIR support
-    # Note: MLIR packages might have different naming conventions
     sudo apt-get install -y \
         llvm-${llvm_version} \
         llvm-${llvm_version}-dev \
@@ -40,6 +39,8 @@ elif [ "$(uname)" = "Linux" ]; then
         clang-${llvm_version} \
         libclang-${llvm_version}-dev \
         liblld-${llvm_version}-dev \
+        libmlir-${llvm_version}-dev \
+        mlir-${llvm_version}-tools \
         || {
         echo "Error: Failed to install LLVM ${llvm_version}"
         echo "Please check if LLVM ${llvm_version} is available for your Ubuntu version at https://apt.llvm.org/"
