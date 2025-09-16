@@ -41,6 +41,7 @@ elif [ "$(uname)" = "Linux" ]; then
         liblld-${llvm_version}-dev \
         libmlir-${llvm_version}-dev \
         mlir-${llvm_version}-tools \
+        libpolly-${llvm_version}-dev \
         || {
         echo "Error: Failed to install LLVM ${llvm_version}"
         echo "Please check if LLVM ${llvm_version} is available for your Ubuntu version at https://apt.llvm.org/"
