@@ -8,7 +8,7 @@ use std::{
     str,
 };
 
-const LLVM_MAJOR_VERSION: usize = 20;
+const LLVM_MAJOR_VERSION: usize = 21;
 
 fn main() {
     if let Err(error) = run() {
@@ -31,12 +31,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
 
     for entry in read_dir(llvm_config("--libdir")?)? {
-        if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-            if name.starts_with("libMLIR") {
-                if let Some(name) = parse_archive_name(name) {
-                    println!("cargo:rustc-link-lib=static={name}");
-                }
-            }
+        if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
+            && name.starts_with("libMLIR")
+            && let Some(name) = parse_archive_name(name)
+        {
+            println!("cargo:rustc-link-lib=static={name}");
         }
     }
 
