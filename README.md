@@ -8,10 +8,10 @@ Rust bindings to [the MLIR C API](https://mlir.llvm.org/docs/CAPI/).
 
 ## Versioning
 
-The versioning scheme follows the LLVM version used, similar to `llvm-sys`. The crate version is the LLVM version multiplied by 10 with a patch version:
+Starting with LLVM 21, this crate follows a versioning scheme similar to `llvm-sys`. The crate version is the LLVM version multiplied by 10 with a patch version:
 
 - `mlir-sys` 210.0.x is compatible with LLVM/MLIR 21.0.x
-- `mlir-sys` 200.0.x is compatible with LLVM/MLIR 20.0.x
+- Previous versions (0.x.x) used a different versioning scheme
 
 ## Install
 
