@@ -2,6 +2,8 @@
 
 set -e
 
+[ -n "$CI" ]
+
 llvm_version=21
 
 brew install llvm@$llvm_version
