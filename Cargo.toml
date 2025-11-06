@@ -1,8 +1,8 @@
 [package]
 name = "mlir-sys"
-version = "210.0.0"
+version = "210.0.1"
 authors = ["McCoy R. Becker", "Yota Toyama", "Edgar Luque"]
-keywords = ["mlir", "llvm"]
+keywords = ["llvm", "mlir"]
 categories = ["external-ffi-bindings"]
 edition = "2024"
 description = "Rust bindings to the MLIR C API."
