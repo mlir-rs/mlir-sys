@@ -15,9 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: swatinem/rust-cache@v2
-      - uses: homebrew/actions/setup-homebrew@master
-      - run: tools/setup.sh
+      - uses: ./.github/actions/setup
       - run: cargo build
   test:
     strategy:
@@ -29,17 +27,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: swatinem/rust-cache@v2
-      - uses: homebrew/actions/setup-homebrew@master
-      - run: tools/setup.sh
+      - uses: ./.github/actions/setup
       - run: cargo test
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: Swatinem/rust-cache@v2
-      - uses: Homebrew/actions/setup-homebrew@master
-      - run: tools/setup.sh
+      - uses: ./.github/actions/setup
       - run: cargo clippy -- -D warnings
   format:
     runs-on: ubuntu-latest
