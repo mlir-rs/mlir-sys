@@ -107,7 +107,7 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     };
 
     let call = format!(
-        "{} --link-static {argument}",
+        "{} --ignore-libllvm --link-static {argument}",
         prefix.join(llvm_config_exe).display(),
     );
 
