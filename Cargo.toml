@@ -1,6 +1,6 @@
 [package]
 name = "mlir-sys"
-version = "210.0.1"
+version = "210.0.2"
 authors = ["McCoy R. Becker", "Yota Toyama", "Edgar Luque"]
 keywords = ["llvm", "mlir"]
 categories = ["external-ffi-bindings"]
