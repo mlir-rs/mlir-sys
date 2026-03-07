@@ -1,0 +1,12 @@
+name: setup
+description: Sets up development environment
+inputs: {}
+outputs: {}
+runs:
+  using: composite
+  steps:
+    # spell-checker: disable-next-line
+    - uses: swatinem/rust-cache@v2
+    - uses: homebrew/actions/setup-homebrew@master
+    - run: tools/setup.sh
+      shell: bash

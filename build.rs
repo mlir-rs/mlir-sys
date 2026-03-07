@@ -1,13 +1,14 @@
 use std::{
     env,
     error::Error,
-    fs, io,
+    ffi::OsStr,
+    fs::read_dir,
     path::Path,
-    process::{exit, Command},
+    process::{Command, exit},
     str,
 };
 
-const LLVM_MAJOR_VERSION: usize = 18;
+const LLVM_MAJOR_VERSION: usize = 21;
 
 fn main() {
     if let Err(error) = run() {
@@ -23,8 +24,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let version = llvm_config("--version")?;
     if !version.starts_with(&format!("{}.", LLVM_MAJOR_VERSION)) {
         return Err(format!(
-            "failed to find correct version ({}.x.x) of llvm-config (found {})",
-            LLVM_MAJOR_VERSION, version
+            "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
         )
         .into());
     }
@@ -48,9 +48,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             && !name.contains("Main")
             && name != "libMLIRSupportIndentedOstream.a"
         {
-            if let Some(name) = trim_library_name(&name) {
-                println!("cargo:rustc-link-lib=static={}", name);
-            }
+            println!("cargo:rustc-link-lib=static={name}");
         }
     }
 
@@ -73,22 +71,19 @@ fn run() -> Result<(), Box<dyn Error>> {
             );
             println!(
                 "cargo:rustc-link-lib={}",
-                path.file_name()
+                path.file_stem()
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .split_once('.')
-                    .unwrap()
-                    .0
                     .trim_start_matches("lib")
             );
         } else {
-            println!("cargo:rustc-link-lib={}", flag);
+            println!("cargo:rustc-link-lib={flag}");
         }
     }
 
     if let Some(name) = get_system_libcpp() {
-        println!("cargo:rustc-link-lib={}", name);
+        println!("cargo:rustc-link-lib={name}");
     }
 
     bindgen::builder()
@@ -132,7 +127,7 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     Ok(str::from_utf8(&output.stdout)?.trim().to_string())
 }
 
-fn trim_library_name(name: &str) -> Option<&str> {
+fn parse_archive_name(name: &str) -> Option<&str> {
     if let Some(name) = name.strip_prefix("lib") {
         name.strip_suffix(".a")
     } else {
