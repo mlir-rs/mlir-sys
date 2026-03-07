@@ -106,12 +106,12 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     let output = command
         .arg("--link-static")
         .arg(argument)
-        .stderr(Stdio::piped())
+        .stderr(Stdio::inherit())
         .output()
         .map_err(|error| format!("failed to run `{command:?}`: {error}"))?;
 
     if !output.status.success() {
-        return Err(format!("failed to run `{command:?}`: {}", output.status,).into());
+        return Err(format!("failed to run `{command:?}`: {}", output.status).into());
     }
 
     Ok(str::from_utf8(&output.stdout)?.trim().into())
