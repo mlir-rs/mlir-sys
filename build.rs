@@ -22,7 +22,8 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=wrapper.h");
 
     let version = llvm_config("--version")?;
-    if !version.starts_with(&format!("{}.", LLVM_MAJOR_VERSION)) {
+
+    if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.")) {
         return Err(format!(
             "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
         )
@@ -31,22 +32,11 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     let lib_dir = llvm_config("--libdir")?;
     println!("cargo:rustc-link-search={lib_dir}");
-    for name in fs::read_dir(lib_dir)?
-        .map(|entry| {
-            Ok(if let Some(name) = entry?.path().file_name() {
-                name.to_str().map(String::from)
-            } else {
-                None
-            })
-        })
-        .collect::<Result<Vec<_>, io::Error>>()?
-        .into_iter()
-        .flatten()
-    {
-        if name.starts_with("libMLIR")
-            && name.ends_with(".a")
-            && !name.contains("Main")
-            && name != "libMLIRSupportIndentedOstream.a"
+
+    for entry in read_dir(lib_dir)? {
+        if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
+            && name.starts_with("libMLIR")
+            && let Some(name) = parse_archive_name(name)
         {
             println!("cargo:rustc-link-lib=static={name}");
         }
