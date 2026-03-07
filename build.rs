@@ -4,7 +4,7 @@ use std::{
     ffi::OsStr,
     fs::read_dir,
     path::Path,
-    process::{Command, exit},
+    process::{Command, Stdio, exit},
     str,
 };
 
@@ -18,19 +18,22 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=wrapper.h");
+
     let version = llvm_config("--version")?;
 
-    if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.",)) {
+    if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.")) {
         return Err(format!(
             "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
         )
         .into());
     }
 
-    println!("cargo:rerun-if-changed=wrapper.h");
-    println!("cargo:rustc-link-search={}", llvm_config("--libdir")?);
+    let directory = llvm_config("--libdir")?;
+    println!("cargo:rustc-link-search={directory}");
 
-    for entry in read_dir(llvm_config("--libdir")?)? {
+    for entry in read_dir(directory)? {
         if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
             && name.starts_with("libMLIR")
             && let Some(name) = parse_archive_name(name)
@@ -39,15 +42,13 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    println!("cargo:rustc-link-lib=MLIR");
-
-    for name in llvm_config("--libnames")?.trim().split(' ') {
+    for name in llvm_config("--libnames")?.split(' ') {
         if let Some(name) = parse_archive_name(name) {
             println!("cargo:rustc-link-lib={name}");
         }
     }
 
-    for flag in llvm_config("--system-libs")?.trim().split(' ') {
+    for flag in llvm_config("--system-libs")?.split(' ') {
         let flag = flag.trim_start_matches("-l");
 
         if flag.starts_with('/') {
@@ -87,9 +88,9 @@ fn run() -> Result<(), Box<dyn Error>> {
 }
 
 fn get_system_libcpp() -> Option<&'static str> {
-    if cfg!(target_env = "msvc") {
+    if env::var("CARGO_CFG_TARGET_ENV").ok()? == "msvc" {
         None
-    } else if cfg!(target_os = "macos") {
+    } else if env::var("CARGO_CFG_TARGET_VENDOR").ok()? == "apple" {
         Some("c++")
     } else {
         Some("stdc++")
@@ -97,30 +98,29 @@ fn get_system_libcpp() -> Option<&'static str> {
 }
 
 fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
-    let prefix = env::var(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
+    let prefix = env::var_os(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
-    let llvm_config_exe = if cfg!(target_os = "windows") {
+
+    let mut command = Command::new(prefix.join(if cfg!(target_os = "windows") {
         "llvm-config.exe"
     } else {
         "llvm-config"
-    };
+    }));
 
-    let call = format!(
-        "{} --ignore-libllvm --link-static {argument}",
-        prefix.join(llvm_config_exe).display(),
-    );
+    let output = command
+        .arg("--ignore-libllvm")
+        .arg("--link-static")
+        .arg(argument)
+        .stderr(Stdio::inherit())
+        .output()
+        .map_err(|error| format!("failed to run `{command:?}`: {error}"))?;
 
-    Ok(str::from_utf8(
-        &if cfg!(target_os = "windows") {
-            Command::new("cmd").args(["/C", &call]).output()?
-        } else {
-            Command::new("sh").arg("-c").arg(&call).output()?
-        }
-        .stdout,
-    )?
-    .trim()
-    .to_string())
+    if !output.status.success() {
+        return Err(format!("failed to run `{command:?}`: {}", output.status).into());
+    }
+
+    Ok(str::from_utf8(&output.stdout)?.trim().into())
 }
 
 fn parse_archive_name(name: &str) -> Option<&str> {
