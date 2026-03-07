@@ -98,7 +98,7 @@ fn get_system_libcpp() -> Option<&'static str> {
 }
 
 fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
-    let prefix = env::var_os(format!("MLIR_SYS_{}0_PREFIX", LLVM_MAJOR_VERSION))
+    let prefix = env::var_os(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
     let mut cmd = Command::new(prefix.join("llvm-config"));
