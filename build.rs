@@ -30,10 +30,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         .into());
     }
 
-    let lib_dir = llvm_config("--libdir")?;
-    println!("cargo:rustc-link-search={lib_dir}");
+    let directory = llvm_config("--libdir")?;
+    println!("cargo:rustc-link-search={directory}");
 
-    for entry in read_dir(lib_dir)? {
+    for entry in read_dir(directory)? {
         if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
             && name.starts_with("libMLIR")
             && let Some(name) = parse_archive_name(name)
