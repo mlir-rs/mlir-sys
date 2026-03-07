@@ -102,8 +102,14 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
 
-    let mut command = Command::new(prefix.join("llvm-config"));
+    let mut command = Command::new(prefix.join(if cfg!(target_os = "windows") {
+        "llvm-config.exe"
+    } else {
+        "llvm-config"
+    }));
+
     let output = command
+        .arg("--ignore-libllvm")
         .arg("--link-static")
         .arg(argument)
         .stderr(Stdio::inherit())
