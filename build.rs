@@ -101,12 +101,14 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     let prefix = env::var_os(format!("MLIR_SYS_{LLVM_MAJOR_VERSION}0_PREFIX"))
         .map(|path| Path::new(&path).join("bin"))
         .unwrap_or_default();
+
     let mut command = Command::new(prefix.join("llvm-config"));
     let output = command
         .arg("--link-static")
         .arg(argument)
         .output()
         .map_err(|e| format!("failed to run `{command:?}`: {e}"))?;
+
     if !output.status.success() {
         return Err(format!(
             "failed to run `{command:?}`: {}; stderr:\n{}",
@@ -115,6 +117,7 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
         )
         .into());
     }
+
     Ok(str::from_utf8(&output.stdout)?.trim().to_string())
 }
 
