@@ -4,7 +4,7 @@ use std::{
     ffi::OsStr,
     fs::read_dir,
     path::Path,
-    process::{Command, exit},
+    process::{Command, Stdio, exit},
     str,
 };
 
@@ -106,16 +106,12 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
     let output = command
         .arg("--link-static")
         .arg(argument)
+        .stderr(Stdio::piped())
         .output()
-        .map_err(|e| format!("failed to run `{command:?}`: {e}"))?;
+        .map_err(|error| format!("failed to run `{command:?}`: {error}"))?;
 
     if !output.status.success() {
-        return Err(format!(
-            "failed to run `{command:?}`: {}; stderr:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr),
-        )
-        .into());
+        return Err(format!("failed to run `{command:?}`: {}", output.status,).into());
     }
 
     Ok(str::from_utf8(&output.stdout)?.trim().into())
