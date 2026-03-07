@@ -43,8 +43,8 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     for name in llvm_config("--libnames")?.split(' ') {
-        if let Some(name) = trim_library_name(name) {
-            println!("cargo:rustc-link-lib={}", name);
+        if let Some(name) = parse_archive_name(name) {
+            println!("cargo:rustc-link-lib={name}");
         }
     }
 
