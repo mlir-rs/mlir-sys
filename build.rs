@@ -118,7 +118,7 @@ fn llvm_config(argument: &str) -> Result<String, Box<dyn Error>> {
         .into());
     }
 
-    Ok(str::from_utf8(&output.stdout)?.trim().to_string())
+    Ok(str::from_utf8(&output.stdout)?.trim().into())
 }
 
 fn parse_archive_name(name: &str) -> Option<&str> {
