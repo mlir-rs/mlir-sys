@@ -126,12 +126,12 @@ enum LinkMode {
 /// Detect whether to link LLVM/MLIR statically or as shared libraries.
 ///
 /// Checks in order:
-/// 1. `MLIR_SYS_LINK_SHARED` env var — "1" or "true" forces shared
+/// 1. `MLIR_SYS_LINK_SHARED=1` env var forces shared
 /// 2. Whether static libraries exist in the lib directory
 /// 3. Falls back to `llvm-config --shared-mode`
 fn detect_link_mode() -> LinkMode {
     if let Ok(val) = env::var("MLIR_SYS_LINK_SHARED")
-        && (val == "1" || val.eq_ignore_ascii_case("true"))
+        && val == "1"
     {
         return LinkMode::Shared;
     }
@@ -174,18 +174,8 @@ fn llvm_config_command() -> Command {
 
 fn try_llvm_config(argument: &str, link_flag: &str) -> Result<String, Box<dyn Error>> {
     let mut command = llvm_config_command();
-    let output = command
-        .arg(link_flag)
-        .arg(argument)
-        .stderr(Stdio::null())
-        .output()
-        .map_err(|error| format!("failed to run `{command:?}`: {error}"))?;
-
-    if !output.status.success() {
-        return Err(format!("failed to run `{command:?}`: {}", output.status).into());
-    }
-
-    Ok(str::from_utf8(&output.stdout)?.trim().into())
+    command.arg(link_flag).arg(argument).stderr(Stdio::null());
+    run_command(command)
 }
 
 fn llvm_config(argument: &str, link_mode: &LinkMode) -> Result<String, Box<dyn Error>> {
@@ -203,9 +193,12 @@ fn llvm_config(argument: &str, link_mode: &LinkMode) -> Result<String, Box<dyn E
         command.arg("--ignore-libllvm");
     }
 
+    command.arg(argument).stderr(Stdio::inherit());
+    run_command(command)
+}
+
+fn run_command(mut command: Command) -> Result<String, Box<dyn Error>> {
     let output = command
-        .arg(argument)
-        .stderr(Stdio::inherit())
         .output()
         .map_err(|error| format!("failed to run `{command:?}`: {error}"))?;
 
