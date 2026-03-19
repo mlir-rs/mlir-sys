@@ -10,7 +10,7 @@ Rust bindings to [the MLIR C API](https://mlir.llvm.org/docs/CAPI/).
 
 Starting with LLVM 21, this crate follows a versioning scheme similar to `llvm-sys`. The crate version is the LLVM version multiplied by 10 with a patch version:
 
-- `mlir-sys` 210.0.x is compatible with LLVM/MLIR 21.0.x
+- `mlir-sys` 220.0.x is compatible with LLVM/MLIR 22.x.x
 - Previous versions (0.x.x) used a different versioning scheme
 
 ## Install
@@ -19,7 +19,7 @@ Starting with LLVM 21, this crate follows a versioning scheme similar to `llvm-s
 cargo add mlir-sys
 ```
 
-This crate searches an `llvm-config` command on build and uses it to determine build configurations related to LLVM and MLIR. You can also use a `MLIR_SYS_210_PREFIX` environment variable to specify a custom directory of LLVM installation.
+This crate searches an `llvm-config` command on build and uses it to determine build configurations related to LLVM and MLIR. You can also use a `MLIR_SYS_220_PREFIX` environment variable to specify a custom directory of LLVM installation.
 
 ## License
 
