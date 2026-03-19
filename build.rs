@@ -2,8 +2,8 @@ use std::{
     env,
     error::Error,
     ffi::OsStr,
-    fs::read_dir,
-    path::Path,
+    fs,
+    path::{Path, PathBuf},
     process::{Command, Stdio, exit},
     str,
 };
@@ -19,17 +19,17 @@ fn main() {
 
 fn run() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=wrapper.h");
-
     let link_mode = detect_link_mode();
 
-    let version = llvm_config("--version", &link_mode)?;
+    if !cfg!(feature = "no-version-check") {
+        let version = llvm_config("--version", &link_mode)?;
 
-    if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.")) {
-        return Err(format!(
-            "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
-        )
-        .into());
+        if !version.starts_with(&format!("{LLVM_MAJOR_VERSION}.")) {
+            return Err(format!(
+                "failed to find correct version ({LLVM_MAJOR_VERSION}.x.x) of llvm-config (found {version})"
+            )
+            .into());
+        }
     }
 
     let directory = llvm_config("--libdir", &link_mode)?;
@@ -37,7 +37,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     match link_mode {
         LinkMode::Static => {
-            for entry in read_dir(&directory)? {
+            for entry in fs::read_dir(&directory)? {
                 if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
                     && name.starts_with("libMLIR")
                     && let Some(name) = parse_static_lib_name(name)
@@ -106,9 +106,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-link-lib={name}");
     }
 
+    let include_dir = llvm_config("--includedir", &link_mode)?;
+    let wrapper_path = generate_wrapper(&include_dir)?;
+
     bindgen::builder()
-        .header("wrapper.h")
-        .clang_arg(format!("-I{}", llvm_config("--includedir", &link_mode)?))
+        .header(wrapper_path.to_str().unwrap())
+        .clang_arg(format!("-I{include_dir}"))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
         .unwrap()
@@ -220,7 +223,7 @@ fn parse_static_lib_name(name: &str) -> Option<&str> {
 fn parse_shared_lib_name(name: &str) -> Option<&str> {
     let name = name.strip_prefix("lib").unwrap_or(name);
 
-    // Handle libFoo.so, libFoo.so.21, libFoo.dylib
+    // Handle libFoo.so, libFoo.so.22, libFoo.dylib
     if let Some(pos) = name.find(".so") {
         Some(&name[..pos])
     } else if let Some(name) = name.strip_suffix(".dylib") {
@@ -228,4 +231,43 @@ fn parse_shared_lib_name(name: &str) -> Option<&str> {
     } else {
         None
     }
+}
+
+fn generate_wrapper(include_dir: &str) -> Result<PathBuf, Box<dyn Error>> {
+    let mlir_c_dir = Path::new(include_dir).join("mlir-c");
+    let mut headers = Vec::new();
+    collect_headers(&mlir_c_dir, &mlir_c_dir, &mut headers)?;
+    headers.sort();
+
+    let mut content = String::new();
+    for header in &headers {
+        content.push_str(&format!("#include <mlir-c/{header}>\n"));
+    }
+
+    let out_path = PathBuf::from(env::var("OUT_DIR")?).join("wrapper.h");
+    fs::write(&out_path, content)?;
+    Ok(out_path)
+}
+
+fn collect_headers(
+    base: &Path,
+    dir: &Path,
+    headers: &mut Vec<String>,
+) -> Result<(), Box<dyn Error>> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            // Skip Bindings/ (Python bindings, not relevant for Rust FFI)
+            if path.file_name().and_then(OsStr::to_str) == Some("Bindings") {
+                continue;
+            }
+            collect_headers(base, &path, headers)?;
+        } else if path.extension().and_then(OsStr::to_str) == Some("h") {
+            let relative = path.strip_prefix(base)?;
+            headers.push(relative.to_string_lossy().into_owned());
+        }
+    }
+    Ok(())
 }

@@ -21,6 +21,16 @@ cargo add mlir-sys
 
 This crate searches an `llvm-config` command on build and uses it to determine build configurations related to LLVM and MLIR. You can also use a `MLIR_SYS_220_PREFIX` environment variable to specify a custom directory of LLVM installation.
 
+The C API bindings are automatically generated at build time by discovering all MLIR C headers from the LLVM installation. This means the bindings will match whatever headers your LLVM build provides, even if it includes custom or out-of-tree dialects.
+
+### Using MLIR from main
+
+To build against MLIR built from the main branch (or any non-release version), enable the `no-version-check` feature to skip the LLVM version validation:
+
+```sh
+cargo add mlir-sys --features no-version-check
+```
+
 ## License
 
 [MIT](LICENSE)
