@@ -1,6 +1,6 @@
 [package]
 name = "mlir-sys"
-version = "220.0.0"
+version = "220.0.1"
 authors = ["McCoy R. Becker", "Yota Toyama", "Edgar Luque"]
 keywords = ["llvm", "mlir"]
 categories = ["external-ffi-bindings"]
@@ -10,6 +10,9 @@ repository = "https://github.com/mlir-rs/mlir-sys"
 readme = "README.md"
 links = "MLIR"
 license-file = "LICENSE"
+
+[features]
+no-version-check = []
 
 [build-dependencies]
 bindgen = "0.72.1"
