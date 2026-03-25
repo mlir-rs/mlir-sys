@@ -6,7 +6,7 @@ runs:
   using: composite
   steps:
     # spell-checker: disable-next-line
-    - uses: swatinem/rust-cache@v2
+    - uses: swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2.9.0
     - uses: homebrew/actions/setup-homebrew@master
     - run: tools/setup.sh
       shell: bash
