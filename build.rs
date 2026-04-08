@@ -3,10 +3,14 @@ use std::{
     error::Error,
     ffi::OsStr,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Stdio, exit},
     str,
 };
+
+/// Logical name passed to bindgen for the in-memory wrapper. Bindgen needs a
+/// `header_name` for diagnostics; this string never touches disk.
+const WRAPPER_NAME: &str = "wrapper.h";
 
 const LLVM_MAJOR_VERSION: usize = 22;
 
@@ -107,10 +111,10 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     let include_dir = llvm_config("--includedir", &link_mode)?;
-    let wrapper_path = generate_wrapper(&include_dir)?;
+    let wrapper_contents = generate_wrapper_contents(&include_dir)?;
 
     bindgen::builder()
-        .header(wrapper_path.to_str().unwrap())
+        .header_contents(WRAPPER_NAME, &wrapper_contents)
         .clang_arg(format!("-I{include_dir}"))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
@@ -233,7 +237,14 @@ fn parse_shared_lib_name(name: &str) -> Option<&str> {
     }
 }
 
-fn generate_wrapper(include_dir: &str) -> Result<PathBuf, Box<dyn Error>> {
+/// Walk `{includedir}/mlir-c/` and build an in-memory list of `#include`s
+/// covering every header. Returned as a `String` so it can be passed to
+/// bindgen via `header_contents`, avoiding any on-disk wrapper file. A
+/// disk-backed wrapper would have its mtime rewritten on every build,
+/// which interacts badly with bindgen's `CargoCallbacks::rerun-if-changed`
+/// tracking and forces cargo to rebuild this crate (and everything that
+/// depends on it) on every invocation.
+fn generate_wrapper_contents(include_dir: &str) -> Result<String, Box<dyn Error>> {
     let mlir_c_dir = Path::new(include_dir).join("mlir-c");
     let mut headers = Vec::new();
     collect_headers(&mlir_c_dir, &mlir_c_dir, &mut headers)?;
@@ -243,10 +254,7 @@ fn generate_wrapper(include_dir: &str) -> Result<PathBuf, Box<dyn Error>> {
     for header in &headers {
         content.push_str(&format!("#include <mlir-c/{header}>\n"));
     }
-
-    let out_path = PathBuf::from(env::var("OUT_DIR")?).join("wrapper.h");
-    fs::write(&out_path, content)?;
-    Ok(out_path)
+    Ok(content)
 }
 
 fn collect_headers(
