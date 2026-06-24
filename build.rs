@@ -42,11 +42,15 @@ fn run() -> Result<(), Box<dyn Error>> {
     match link_mode {
         LinkMode::Static => {
             for entry in fs::read_dir(&directory)? {
-                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
-                    && name.starts_with("libMLIR")
-                    && let Some(name) = parse_static_lib_name(name)
-                {
-                    println!("cargo:rustc-link-lib=static={name}");
+                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
+                    let is_mlir = name.starts_with("libMLIR") || name.starts_with("MLIR");
+                    if is_mlir {
+                        if let Some(name) = parse_static_lib_name(name) {
+                            println!("cargo:rustc-link-lib=static={name}");
+                        } else if let Some(name) = name.strip_suffix(".lib") {
+                            println!("cargo:rustc-link-lib={name}");
+                        }
+                    }
                 }
             }
         }
@@ -67,6 +71,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         match link_mode {
             LinkMode::Static => {
                 if let Some(name) = parse_static_lib_name(name) {
+                    println!("cargo:rustc-link-lib={name}");
+                } else if let Some(name) = name.strip_suffix(".lib") {
                     println!("cargo:rustc-link-lib={name}");
                 }
             }
@@ -102,7 +108,8 @@ fn run() -> Result<(), Box<dyn Error>> {
                     .trim_start_matches("lib")
             );
         } else {
-            println!("cargo:rustc-link-lib={flag}");
+            let name = flag.strip_suffix(".lib").unwrap_or(flag);
+            println!("cargo:rustc-link-lib={name}");
         }
     }
 
