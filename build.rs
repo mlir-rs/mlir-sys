@@ -41,9 +41,23 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     match link_mode {
         LinkMode::Static => {
+            // `llvm-config --libnames` never reports the `MLIRCAPI*`
+            // libraries at all (verified directly: `--libnames` output has
+            // no `CAPI` entry) -- this disk scan is the *only* thing that
+            // picks them up, by matching the raw filenames MLIR's own build
+            // actually produces. On Unix that's `libMLIR*.a`; on Windows
+            // it's `MLIR*.lib`, no `lib` prefix at all (verified: 0 of 389
+            // `MLIR*` files in the install's `lib/` start with `lib`) --
+            // `name.starts_with("libMLIR")` alone silently matches nothing
+            // there, so every one of these libraries (including
+            // `MLIRCAPIIR`, whose `mlirFloat8E3M4TypeGet`/etc. melior itself
+            // calls) never reached the linker at all (found by direct
+            // testing: an `LNK2019 unresolved external symbol` naming
+            // exactly those functions, with zero mention of `MLIRCAPIIR` in
+            // the actual link command).
             for entry in fs::read_dir(&directory)? {
                 if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
-                    && name.starts_with("libMLIR")
+                    && (name.starts_with("libMLIR") || name.starts_with("MLIR"))
                     && let Some(name) = parse_static_lib_name(name)
                 {
                     println!("cargo:rustc-link-lib=static={name}");
@@ -102,6 +116,14 @@ fn run() -> Result<(), Box<dyn Error>> {
                     .trim_start_matches("lib")
             );
         } else {
+            // On Windows, `llvm-config --system-libs` reports names with
+            // their own `.lib` suffix already (e.g. `psapi.lib`) -- unlike
+            // Linux's bare `-lfoo` form, which the `trim_start_matches("-l")`
+            // above already handles. Passed through as-is, Cargo's own
+            // `cargo:rustc-link-lib` appends the platform's library suffix a
+            // *second* time, producing a nonexistent `psapi.lib.lib` at link
+            // time (found by direct testing).
+            let flag = flag.strip_suffix(".lib").unwrap_or(flag);
             println!("cargo:rustc-link-lib={flag}");
         }
     }
@@ -113,15 +135,101 @@ fn run() -> Result<(), Box<dyn Error>> {
     let include_dir = llvm_config("--includedir", &link_mode)?;
     let wrapper_contents = generate_wrapper_contents(&include_dir)?;
 
-    bindgen::builder()
+    let bindings = bindgen::builder()
         .header_contents(WRAPPER_NAME, &wrapper_contents)
         .clang_arg(format!("-I{include_dir}"))
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()
-        .unwrap()
-        .write_to_file(Path::new(&env::var("OUT_DIR")?).join("bindings.rs"))?;
+        .unwrap();
+
+    // Scoped to MSVC specifically, not run unconditionally on every target:
+    // this normalization has only been verified against the four enums
+    // melior's own source actually exercises (`MlirWalkOrder`,
+    // `MlirDiagnosticSeverity`, `MlirGreedyRewriteStrictness`,
+    // `MlirGreedySimplifyRegionLevel`) -- there's no proof every other
+    // `Mlir`-prefixed enum in the C API needs the same treatment, and if one
+    // ever turned out to genuinely want `i32` (with Clang already inferring
+    // `c_int` for it on non-MSVC targets too, i.e. already working there),
+    // an unconditional normalization would silently break that currently-
+    // correct case. Gating to the one target where the mismatch is actually
+    // confirmed keeps this fix unable to change anything on Linux/macOS at
+    // all, matching the same `CARGO_CFG_TARGET_ENV == "msvc"` precedent
+    // `get_system_libcpp` above already uses.
+    let text = if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        normalize_enum_signedness(&bindings.to_string())
+    } else {
+        bindings.to_string()
+    };
+    fs::write(Path::new(&env::var("OUT_DIR")?).join("bindings.rs"), text)?;
 
     Ok(())
+}
+
+/// C leaves an `enum`'s underlying integer type implementation-defined --
+/// Clang (used internally by bindgen) infers it per-target, and for these
+/// particular MLIR C API enums (small, all-non-negative value sets) it
+/// infers a *signed* `c_int` when targeting `-pc-windows-msvc`, but an
+/// *unsigned* one on the Linux/macOS targets melior's own hand-written Rust
+/// source is developed and tested against -- which hardcodes `u32`
+/// throughout, breaking the build on Windows specifically (found by direct
+/// testing: `MlirWalkOrder`/`MlirDiagnosticSeverity`/
+/// `MlirGreedyRewriteStrictness` all came back `c_int` here). Safe to
+/// normalize post-hoc: an `enum` parameter passed by value across an
+/// `extern "C"` boundary has the same 4-byte representation whether Rust
+/// calls it `i32` or `u32` -- only the *type-checker's* view of signedness
+/// changes, not the actual C ABI.
+///
+/// Detects bindgen's own "Consts" enum-codegen shape structurally (a
+/// `pub type NAME = ::std::os::raw::c_int;` alias immediately followed,
+/// somewhere below, by at least one `pub const _: NAME = _;` using it) --
+/// not by name-matching against a fixed list -- so any *MLIR* C API enum
+/// this same issue affects, including ones no example here has exercised
+/// yet, gets normalized the same way. Deliberately scoped two ways, both
+/// required: the alias name must start with `Mlir` (the wrapper transitively
+/// pulls in some plain `llvm-c/*.h` headers too, via `mlir-c`'s own
+/// includes -- their enums are a different C API, not what this issue is
+/// about, and at least one of them, `LLVMAttributeFunctionIndex`, genuinely
+/// holds `-1` as a sentinel and would silently fail to compile if
+/// unsigned-normalized); and none of its own `pub const` values may be
+/// negative, a second, independent guard against exactly that same mistake.
+fn normalize_enum_signedness(bindings: &str) -> String {
+    // rustfmt-style output wraps a long `pub const NAME: Type = value;` onto
+    // two lines (`pub const NAME:` / `    Type = value;`) once the name gets
+    // long enough -- which every one of these actually does, being prefixed
+    // with the enum's own name (`MlirGreedyRewriteStrictness_MLIR_GREEDY_
+    // REWRITE_STRICTNESS_ANY_OP`, ...). Matching against a whitespace-
+    // collapsed copy makes both detection passes below robust to that
+    // wrapping without needing to special-case it explicitly.
+    let flattened: String = bindings.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    let mut candidates = Vec::new();
+    for line in bindings.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("pub type ") else { continue };
+        let Some((name, ty)) = rest.split_once(" = ") else { continue };
+        if name.starts_with("Mlir")
+            && ty.trim_end_matches(';') == "::std::os::raw::c_int"
+            && flattened.contains(&format!(": {name} ="))
+        {
+            candidates.push(name.to_string());
+        }
+    }
+
+    let mut enum_alias_names = Vec::new();
+    for name in candidates {
+        let has_negative_value = flattened.contains(&format!(": {name} = -"));
+        if !has_negative_value {
+            enum_alias_names.push(name);
+        }
+    }
+
+    let mut text = bindings.to_string();
+    for name in &enum_alias_names {
+        text = text.replace(
+            &format!("pub type {name} = ::std::os::raw::c_int;"),
+            &format!("pub type {name} = ::std::os::raw::c_uint;"),
+        );
+    }
+    text
 }
 
 #[derive(Clone, Copy)]
@@ -217,7 +325,13 @@ fn run_command(mut command: Command) -> Result<String, Box<dyn Error>> {
 }
 
 fn parse_static_lib_name(name: &str) -> Option<&str> {
-    if let Some(name) = name.strip_prefix("lib") {
+    // Windows static libs have no `lib` prefix at all (`MLIRCAPIIR.lib`, not
+    // `libMLIRCAPIIR.lib`) -- verified directly against the actual install's
+    // `lib/` directory. `.lib` never appears as a Unix static-archive suffix
+    // (that's always `.a`), so checking it first is unambiguous.
+    if let Some(name) = name.strip_suffix(".lib") {
+        Some(name)
+    } else if let Some(name) = name.strip_prefix("lib") {
         name.strip_suffix(".a")
     } else {
         None
