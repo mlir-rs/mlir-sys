@@ -142,7 +142,24 @@ fn run() -> Result<(), Box<dyn Error>> {
         .generate()
         .unwrap();
 
-    let text = normalize_enum_signedness(&bindings.to_string());
+    // Scoped to MSVC specifically, not run unconditionally on every target:
+    // this normalization has only been verified against the four enums
+    // melior's own source actually exercises (`MlirWalkOrder`,
+    // `MlirDiagnosticSeverity`, `MlirGreedyRewriteStrictness`,
+    // `MlirGreedySimplifyRegionLevel`) -- there's no proof every other
+    // `Mlir`-prefixed enum in the C API needs the same treatment, and if one
+    // ever turned out to genuinely want `i32` (with Clang already inferring
+    // `c_int` for it on non-MSVC targets too, i.e. already working there),
+    // an unconditional normalization would silently break that currently-
+    // correct case. Gating to the one target where the mismatch is actually
+    // confirmed keeps this fix unable to change anything on Linux/macOS at
+    // all, matching the same `CARGO_CFG_TARGET_ENV == "msvc"` precedent
+    // `get_system_libcpp` above already uses.
+    let text = if env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        normalize_enum_signedness(&bindings.to_string())
+    } else {
+        bindings.to_string()
+    };
     fs::write(Path::new(&env::var("OUT_DIR")?).join("bindings.rs"), text)?;
 
     Ok(())
