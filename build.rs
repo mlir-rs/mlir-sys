@@ -245,7 +245,13 @@ fn parse_shared_lib_name(name: &str) -> Option<&str> {
 /// tracking and forces cargo to rebuild this crate (and everything that
 /// depends on it) on every invocation.
 fn generate_wrapper_contents(include_dir: &str) -> Result<String, Box<dyn Error>> {
-    let mlir_c_dir = Path::new(include_dir).join("mlir-c");
+    let api = "mlir-c";
+    let mlir_c_dir = Path::new(include_dir).join(api);
+    if !fs::exists(&mlir_c_dir)? {
+        return Err(
+            format!("failed to find '{api}' headers: MLIR is missing from LLVM-{LLVM_MAJOR_VERSION} install. See issue #99").into(),
+        );
+    }
     let mut headers = Vec::new();
     collect_headers(&mlir_c_dir, &mlir_c_dir, &mut headers)?;
     headers.sort();
