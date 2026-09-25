@@ -11,6 +11,7 @@ use std::{
 /// Logical name passed to bindgen for the in-memory wrapper. Bindgen needs a
 /// `header_name` for diagnostics; this string never touches disk.
 const WRAPPER_NAME: &str = "wrapper.h";
+const MLIR_C_INCLUDE_DIRECTORY: &str = "mlir-c";
 
 const LLVM_MAJOR_VERSION: usize = 23;
 
@@ -245,13 +246,14 @@ fn parse_shared_lib_name(name: &str) -> Option<&str> {
 /// tracking and forces cargo to rebuild this crate (and everything that
 /// depends on it) on every invocation.
 fn generate_wrapper_contents(include_dir: &str) -> Result<String, Box<dyn Error>> {
-    let api = "mlir-c";
-    let mlir_c_dir = Path::new(include_dir).join(api);
+    let mlir_c_dir = Path::new(include_dir).join(MLIR_C_INCLUDE_DIRECTORY);
+
     if !fs::exists(&mlir_c_dir)? {
         return Err(
-            format!("failed to find '{api}' headers: MLIR is missing from LLVM-{LLVM_MAJOR_VERSION} install.").into(),
+            format!("failed to find '{MLIR_C_INCLUDE_DIRECTORY}' headers: MLIR is missing from LLVM {LLVM_MAJOR_VERSION} install").into(),
         );
     }
+
     let mut headers = Vec::new();
     collect_headers(&mlir_c_dir, &mlir_c_dir, &mut headers)?;
     headers.sort();
