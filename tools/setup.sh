@@ -4,7 +4,7 @@ set -e
 
 [ -n "$CI" ]
 
-llvm_version=22
+llvm_version=23
 
 brew install llvm@$llvm_version
 llvm_prefix=$(brew --prefix llvm@$llvm_version)
