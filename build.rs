@@ -8,6 +8,8 @@ use std::{
     str,
 };
 
+// cspell: ignore includedir libcpp libllvm libnames msvc stdc
+
 /// Logical name passed to bindgen for the in-memory wrapper. Bindgen needs a
 /// `header_name` for diagnostics; this string never touches disk.
 const WRAPPER_NAME: &str = "wrapper.h";

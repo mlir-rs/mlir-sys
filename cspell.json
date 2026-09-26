@@ -1,16 +1,4 @@
 {
   "useGitignore": true,
-  "words": [
-    "bindgen",
-    "clippy",
-    "includedir",
-    "libcpp",
-    "libllvm",
-    "libnames",
-    "mlir",
-    "msvc",
-    "newmod",
-    "stdc",
-    "zstd"
-  ]
+  "words": ["bindgen", "clippy", "mlir", "newmod", "zstd"]
 }
