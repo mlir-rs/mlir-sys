@@ -6,7 +6,8 @@ set -e
 
 llvm_version=23
 
-if [ "$RUNNER_OS" = Windows ]; then
+case $RUNNER_OS in
+Windows)
   llvm_prefix=$RUNNER_TEMP/llvm
 
   # The zlib and libxml2 development packages provide import libraries listed by llvm-config.
@@ -18,7 +19,8 @@ if [ "$RUNNER_OS" = Windows ]; then
 
   echo MLIR_SYS_${llvm_version}0_PREFIX=$llvm_prefix/Library >>$GITHUB_ENV
   echo $llvm_prefix/Library/bin >>$GITHUB_PATH
-else
+  ;;
+*)
   brew install llvm@$llvm_version
   llvm_prefix=$(brew --prefix llvm@$llvm_version)
 
@@ -27,4 +29,5 @@ else
 
   # For the discovery of the zstd library on macOS
   echo LIBRARY_PATH=$(brew --prefix)/lib >>$GITHUB_ENV
-fi
+  ;;
+esac
