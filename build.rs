@@ -114,8 +114,10 @@ fn run() -> Result<(), Box<dyn Error>> {
                     .trim_start_matches("lib")
             );
         } else {
-            let name = flag.strip_suffix(".lib").unwrap_or(flag);
-            println!("cargo:rustc-link-lib={name}");
+            println!(
+                "cargo:rustc-link-lib={}",
+                flag.strip_suffix(".lib").unwrap_or(flag)
+            );
         }
     }
 
