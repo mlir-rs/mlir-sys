@@ -1,0 +1,4 @@
+{
+  "useGitignore": true,
+  "words": ["bindgen", "clippy", "mlir", "newmod", "zstd"]
+}
