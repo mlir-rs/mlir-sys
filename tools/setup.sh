@@ -26,7 +26,8 @@ Windows)
   # The zlib and libxml2 development packages provide import libraries listed by llvm-config.
   $CONDA/Scripts/conda.exe create -y -p $llvm_prefix -c conda-forge --override-channels \
     mlir=$llvm_version zlib libxml2-devel
-  # llvm-config lists the zstd import library by its DLL name.
+
+  # `llvm-config` lists the zstd import library by its DLL name.
   # https://github.com/llvm/llvm-project/issues/134025
   cp $llvm_prefix/Library/lib/zstd.lib $llvm_prefix/Library/lib/zstd.dll.lib
 
