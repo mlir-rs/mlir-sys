@@ -98,8 +98,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
 
         if flag.starts_with('/') {
-            // llvm-config returns absolute paths for dynamically linked
-            // libraries.
+            // llvm-config returns absolute paths for dynamically linked libraries.
             let path = Path::new(flag);
 
             println!(
