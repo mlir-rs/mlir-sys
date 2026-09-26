@@ -9,6 +9,7 @@ llvm_version=23
 case $RUNNER_OS in
 Linux | macOS)
   brew install llvm@$llvm_version
+
   llvm_prefix=$(brew --prefix llvm@$llvm_version)
 
   (
