@@ -32,7 +32,10 @@ Windows)
 
   # `llvm-config` lists the zstd import library by its DLL name.
   # https://github.com/llvm/llvm-project/issues/134025
-  cp $llvm_prefix/Library/lib/zstd.lib $llvm_prefix/Library/lib/zstd.dll.lib
+  (
+    cd $llvm_prefix/Library/lib
+    cp zstd.lib zstd.dll.lib
+  )
 
   echo MLIR_SYS_${llvm_version}0_PREFIX=$llvm_prefix/Library >>$GITHUB_ENV
   echo $llvm_prefix/Library/bin >>$GITHUB_PATH
