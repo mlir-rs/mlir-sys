@@ -1,15 +1,14 @@
 [package]
 name = "mlir-sys"
 version = "230.0.1"
-authors = ["McCoy R. Becker", "Yota Toyama", "Edgar Luque"]
-keywords = ["llvm", "mlir"]
-categories = ["external-ffi-bindings"]
 edition = "2024"
 description = "Rust bindings to the MLIR C API."
-repository = "https://github.com/mlir-rs/mlir-sys"
 readme = "README.md"
-links = "MLIR"
+repository = "https://github.com/mlir-rs/mlir-sys"
 license-file = "LICENSE"
+keywords = ["llvm", "mlir"]
+categories = ["external-ffi-bindings"]
+links = "MLIR"
 
 [build-dependencies]
 bindgen = "0.73.1"
