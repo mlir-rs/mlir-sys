@@ -46,14 +46,16 @@ fn run() -> Result<(), Box<dyn Error>> {
         LinkMode::Static => {
             for entry in fs::read_dir(&directory)? {
                 if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-                    if name.starts_with("libMLIR")
-                        || name.starts_with("MLIR") && name != "MLIR-C.lib"
+                    if cfg!(target_env = "msvc")
+                        && name.starts_with("MLIR")
+                        && name != "MLIR-C.lib"
+                        && let Some(name) = name.strip_suffix(".lib")
                     {
-                        if let Some(name) = parse_static_lib_name(name) {
-                            println!("cargo:rustc-link-lib=static={name}");
-                        } else if let Some(name) = name.strip_suffix(".lib") {
-                            println!("cargo:rustc-link-lib={name}");
-                        }
+                        println!("cargo:rustc-link-lib={name}");
+                    } else if name.starts_with("libMLIR")
+                        && let Some(name) = parse_static_lib_name(name)
+                    {
+                        println!("cargo:rustc-link-lib=static={name}");
                     }
                 }
             }
@@ -96,7 +98,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         }
 
         if flag.starts_with('/') {
-            // llvm-config returns absolute paths for dynamically linked libraries.
+            // llvm-config returns absolute paths for dynamically linked
+            // libraries.
             let path = Path::new(flag);
 
             println!(
@@ -167,9 +170,9 @@ fn detect_link_mode() -> LinkMode {
 }
 
 fn get_system_libcpp() -> Option<&'static str> {
-    if env::var("CARGO_CFG_TARGET_ENV").ok()? == "msvc" {
+    if cfg!(target_env = "msvc") {
         None
-    } else if env::var("CARGO_CFG_TARGET_VENDOR").ok()? == "apple" {
+    } else if cfg!(target_vendor = "apple") {
         Some("c++")
     } else {
         Some("stdc++")
