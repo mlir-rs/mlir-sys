@@ -51,7 +51,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                         && name != "MLIR-C.lib"
                         && let Some(name) = name.strip_suffix(".lib")
                     {
-                        println!("cargo:rustc-link-lib={name}");
+                        println!("cargo:rustc-link-lib=static={name}");
                     } else if name.starts_with("libMLIR")
                         && let Some(name) = parse_static_lib_name(name)
                     {
