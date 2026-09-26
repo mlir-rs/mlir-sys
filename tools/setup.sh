@@ -7,6 +7,16 @@ set -e
 llvm_version=23
 
 case $RUNNER_OS in
+Linux | macOS)
+  brew install llvm@$llvm_version
+  llvm_prefix=$(brew --prefix llvm@$llvm_version)
+
+  echo MLIR_SYS_${llvm_version}0_PREFIX=$llvm_prefix >>$GITHUB_ENV
+  echo LD_LIBRARY_PATH=$llvm_prefix/lib:$LD_LIBRARY_PATH >>$GITHUB_ENV
+
+  # For the discovery of the zstd library on macOS
+  echo LIBRARY_PATH=$(brew --prefix)/lib >>$GITHUB_ENV
+  ;;
 Windows)
   llvm_prefix=$RUNNER_TEMP/llvm
 
@@ -19,15 +29,5 @@ Windows)
 
   echo MLIR_SYS_${llvm_version}0_PREFIX=$llvm_prefix/Library >>$GITHUB_ENV
   echo $llvm_prefix/Library/bin >>$GITHUB_PATH
-  ;;
-*)
-  brew install llvm@$llvm_version
-  llvm_prefix=$(brew --prefix llvm@$llvm_version)
-
-  echo MLIR_SYS_${llvm_version}0_PREFIX=$llvm_prefix >>$GITHUB_ENV
-  echo LD_LIBRARY_PATH=$llvm_prefix/lib:$LD_LIBRARY_PATH >>$GITHUB_ENV
-
-  # For the discovery of the zstd library on macOS
-  echo LIBRARY_PATH=$(brew --prefix)/lib >>$GITHUB_ENV
   ;;
 esac
