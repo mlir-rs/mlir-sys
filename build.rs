@@ -45,16 +45,14 @@ fn run() -> Result<(), Box<dyn Error>> {
     match link_mode {
         LinkMode::Static => {
             for entry in fs::read_dir(&directory)? {
-                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-                    let is_mlir = name.starts_with("libMLIR")
-                        || (name.starts_with("MLIR") && name != "MLIR-C.lib");
-                    if is_mlir {
-                        if let Some(name) = parse_static_lib_name(name) {
-                            println!("cargo:rustc-link-lib=static={name}");
-                        } else if let Some(name) = name.strip_suffix(".lib") {
-                            println!("cargo:rustc-link-lib={name}");
-                        }
-                    }
+                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
+                    && (name.starts_with("libMLIR")
+                        || cfg!(target_env = "msvc")
+                            && name.starts_with("MLIR")
+                            && name != "MLIR-C.lib")
+                    && let Some(name) = parse_static_lib_name(name)
+                {
+                    println!("cargo:rustc-link-lib=static={name}");
                 }
             }
         }
@@ -68,6 +66,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     for name in llvm_config("--libnames", &link_mode)?.split(' ') {
         let name = name.trim();
+
         if name.is_empty() {
             continue;
         }
@@ -75,9 +74,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         match link_mode {
             LinkMode::Static => {
                 if let Some(name) = parse_static_lib_name(name) {
-                    println!("cargo:rustc-link-lib={name}");
-                } else if let Some(name) = name.strip_suffix(".lib") {
-                    println!("cargo:rustc-link-lib={name}");
+                    println!("cargo:rustc-link-lib=static={name}");
                 }
             }
             LinkMode::Shared => {
@@ -112,8 +109,10 @@ fn run() -> Result<(), Box<dyn Error>> {
                     .trim_start_matches("lib")
             );
         } else {
-            let name = flag.strip_suffix(".lib").unwrap_or(flag);
-            println!("cargo:rustc-link-lib={name}");
+            println!(
+                "cargo:rustc-link-lib={}",
+                flag.strip_suffix(".lib").unwrap_or(flag)
+            );
         }
     }
 
@@ -148,9 +147,7 @@ enum LinkMode {
 /// 2. Whether static libraries exist in the lib directory
 /// 3. Falls back to `llvm-config --shared-mode`
 fn detect_link_mode() -> LinkMode {
-    if let Ok(val) = env::var("MLIR_SYS_LINK_SHARED")
-        && val == "1"
-    {
+    if env::var("MLIR_SYS_LINK_SHARED").as_deref() == Ok("1") {
         return LinkMode::Shared;
     }
 
@@ -169,9 +166,9 @@ fn detect_link_mode() -> LinkMode {
 }
 
 fn get_system_libcpp() -> Option<&'static str> {
-    if env::var("CARGO_CFG_TARGET_ENV").ok()? == "msvc" {
+    if cfg!(target_env = "msvc") {
         None
-    } else if env::var("CARGO_CFG_TARGET_VENDOR").ok()? == "apple" {
+    } else if cfg!(target_vendor = "apple") {
         Some("c++")
     } else {
         Some("stdc++")
@@ -230,6 +227,8 @@ fn run_command(mut command: Command) -> Result<String, Box<dyn Error>> {
 fn parse_static_lib_name(name: &str) -> Option<&str> {
     if let Some(name) = name.strip_prefix("lib") {
         name.strip_suffix(".a")
+    } else if let Some(name) = name.strip_suffix(".lib") {
+        Some(name)
     } else {
         None
     }
@@ -281,19 +280,17 @@ fn collect_headers(
     headers: &mut Vec<String>,
 ) -> Result<(), Box<dyn Error>> {
     for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
+        let path = entry?.path();
 
         if path.is_dir() {
             // Skip Bindings/ (Python bindings, not relevant for Rust FFI)
-            if path.file_name().and_then(OsStr::to_str) == Some("Bindings") {
-                continue;
+            if path.file_name().and_then(OsStr::to_str) != Some("Bindings") {
+                collect_headers(base, &path, headers)?;
             }
-            collect_headers(base, &path, headers)?;
         } else if path.extension().and_then(OsStr::to_str) == Some("h") {
-            let relative = path.strip_prefix(base)?;
-            headers.push(relative.to_string_lossy().into_owned());
+            headers.push(path.strip_prefix(base)?.to_string_lossy().into_owned());
         }
     }
+
     Ok(())
 }
