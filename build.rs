@@ -67,6 +67,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     for name in llvm_config("--libnames", &link_mode)?.split(' ') {
         let name = name.trim();
+
         if name.is_empty() {
             continue;
         }
