@@ -281,19 +281,17 @@ fn collect_headers(
     headers: &mut Vec<String>,
 ) -> Result<(), Box<dyn Error>> {
     for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
+        let path = entry?.path();
 
         if path.is_dir() {
             // Skip Bindings/ (Python bindings, not relevant for Rust FFI)
-            if path.file_name().and_then(OsStr::to_str) == Some("Bindings") {
-                continue;
+            if path.file_name().and_then(OsStr::to_str) != Some("Bindings") {
+                collect_headers(base, &path, headers)?;
             }
-            collect_headers(base, &path, headers)?;
         } else if path.extension().and_then(OsStr::to_str) == Some("h") {
-            let relative = path.strip_prefix(base)?;
-            headers.push(relative.to_string_lossy().into_owned());
+            headers.push(path.strip_prefix(base)?.to_string_lossy().into_owned());
         }
     }
+
     Ok(())
 }
