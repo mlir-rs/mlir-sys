@@ -46,13 +46,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         LinkMode::Static => {
             for entry in fs::read_dir(&directory)? {
                 if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-                    if cfg!(target_env = "msvc")
-                        && name.starts_with("MLIR")
-                        && name != "MLIR-C.lib"
-                        && let Some(name) = name.strip_suffix(".lib")
-                    {
-                        println!("cargo:rustc-link-lib=static={name}");
-                    } else if name.starts_with("libMLIR")
+                    if (name.starts_with("libMLIR")
+                        || cfg!(target_env = "msvc")
+                            && name.starts_with("MLIR")
+                            && name != "MLIR-C.lib")
                         && let Some(name) = parse_static_lib_name(name)
                     {
                         println!("cargo:rustc-link-lib=static={name}");
@@ -77,9 +74,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         match link_mode {
             LinkMode::Static => {
                 if let Some(name) = parse_static_lib_name(name) {
-                    println!("cargo:rustc-link-lib={name}");
-                } else if let Some(name) = name.strip_suffix(".lib") {
-                    println!("cargo:rustc-link-lib={name}");
+                    println!("cargo:rustc-link-lib=static={name}");
                 }
             }
             LinkMode::Shared => {
@@ -232,6 +227,8 @@ fn run_command(mut command: Command) -> Result<String, Box<dyn Error>> {
 fn parse_static_lib_name(name: &str) -> Option<&str> {
     if let Some(name) = name.strip_prefix("lib") {
         name.strip_suffix(".a")
+    } else if let Some(name) = name.strip_suffix(".lib") {
+        Some(name)
     } else {
         None
     }
