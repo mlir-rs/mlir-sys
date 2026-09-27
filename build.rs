@@ -45,15 +45,14 @@ fn run() -> Result<(), Box<dyn Error>> {
     match link_mode {
         LinkMode::Static => {
             for entry in fs::read_dir(&directory)? {
-                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str) {
-                    if (name.starts_with("libMLIR")
+                if let Some(name) = entry?.path().file_name().and_then(OsStr::to_str)
+                    && (name.starts_with("libMLIR")
                         || cfg!(target_env = "msvc")
                             && name.starts_with("MLIR")
                             && name != "MLIR-C.lib")
-                        && let Some(name) = parse_static_lib_name(name)
-                    {
-                        println!("cargo:rustc-link-lib=static={name}");
-                    }
+                    && let Some(name) = parse_static_lib_name(name)
+                {
+                    println!("cargo:rustc-link-lib=static={name}");
                 }
             }
         }
