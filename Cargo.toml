@@ -1,6 +1,6 @@
 [package]
 name = "mlir-sys"
-version = "230.0.1"
+version = "230.0.2"
 edition = "2024"
 description = "Rust bindings to the MLIR C API."
 readme = "README.md"
