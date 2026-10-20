@@ -15,7 +15,7 @@ use std::{
 const WRAPPER_NAME: &str = "wrapper.h";
 const MLIR_C_INCLUDE_DIRECTORY: &str = "mlir-c";
 
-const LLVM_MAJOR_VERSION: usize = 23;
+const LLVM_MAJOR_VERSION: usize = 24;
 
 fn main() {
     if let Err(error) = run() {
